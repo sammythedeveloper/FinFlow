@@ -1,5 +1,5 @@
 using FinancialTracker.API.Data;
-using FinancialTracker.API.DTOs; // <-- Required for UserResponseDto
+using FinancialTracker.API.DTOs; // 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

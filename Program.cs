@@ -1,5 +1,12 @@
+using FinancialTracker.API.Data;
 using FinancialTracker.API.Services;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Register AppDbContext with PostgreSQL
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -13,11 +20,11 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     
-    // Connects Swagger UI to .NET's native OpenAPI endpoint
+    // Connects Swagger UI to .NET's native 
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/openapi/v1.json", "FinancialTracker API v1");
-        options.RoutePrefix = string.Empty; // Loads Swagger directly at the root URL
+        options.RoutePrefix = string.Empty; 
     });
 }
 
