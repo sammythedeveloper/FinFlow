@@ -1,36 +1,34 @@
+using FinancialTracker.API.Data;
+using FinancialTracker.API.DTOs; // <-- Required for UserResponseDto
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FinancialTracker.API.Data;
-using FinancialTracker.API.Models;
 
-namespace FinancialTracker.API.Controllers
+namespace FinancialTracker.API.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class UsersController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class UsersController : ControllerBase
+    private readonly AppDbContext _context;
+
+    public UsersController(AppDbContext context)
     {
-        private readonly AppDbContext _context;
+        _context = context;
+    }
 
-        public UsersController(AppDbContext context)
-        {
-            _context = context;
-        }
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetUsers()
+    {
+        var users = await _context.Users
+            .Select(u => new UserResponseDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Email = u.Email,
+                CreatedAt = u.CreatedAt
+            })
+            .ToListAsync();
 
-        // GET: api/users
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
-        {
-            return await _context.Users.ToListAsync();
-        }
-
-        // POST: api/users
-        [HttpPost]
-        public async Task<ActionResult<User>> CreateUser(User user)
-        {
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, user);
-        }
+        return Ok(users);
     }
 }
