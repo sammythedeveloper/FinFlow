@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FinancialTracker.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+db076099c2cf95918cb56cef044a327f75b81149")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1b314f129cd2702e24017e0b6e7e3031706a655d")]
 [assembly: System.Reflection.AssemblyProductAttribute("FinancialTracker.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FinancialTracker.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
