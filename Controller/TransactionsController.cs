@@ -27,15 +27,40 @@ public class TransactionsController : ControllerBase
         return claim != null && int.TryParse(claim.Value, out int id) ? id : 0;
     }
 
-    // GET: api/transactions (Only returns transactions for the logged-in user)
+    // GET: api/transactions (Supports Filtering & Pagination)
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TransactionResponseDto>>> GetTransactions()
+    public async Task<IActionResult> GetTransactions([FromQuery] TransactionQueryParameters query)
     {
         var userId = GetUserId();
+        if (userId == 0)
+        {
+            return Unauthorized();
+        }
 
-        var transactions = await _context.Transactions
+        // Base query restricted to logged-in user
+        var transactionQuery = _context.Transactions
             .Where(t => t.UserId == userId)
             .Include(t => t.Category)
+            .AsQueryable();
+
+        // 1. Apply Filters
+        if (query.CategoryId.HasValue)
+            transactionQuery = transactionQuery.Where(t => t.CategoryId == query.CategoryId);
+
+        if (query.StartDate.HasValue)
+            transactionQuery = transactionQuery.Where(t => t.Date >= query.StartDate);
+
+        if (query.EndDate.HasValue)
+            transactionQuery = transactionQuery.Where(t => t.Date <= query.EndDate);
+
+        // 2. Get total count before pagination limits
+        var totalCount = await transactionQuery.CountAsync();
+
+        // 3. Apply Ordering, Pagination, and DTO projection
+        var transactions = await transactionQuery
+            .OrderByDescending(t => t.Date) // Newest first
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
             .Select(t => new TransactionResponseDto
             {
                 Id = t.Id,
@@ -44,11 +69,18 @@ public class TransactionsController : ControllerBase
                 Date = t.Date,
                 UserId = t.UserId,
                 CategoryId = t.CategoryId,
-                CategoryName = t.Category.Name
+                CategoryName = t.Category != null ? t.Category.Name : string.Empty
             })
             .ToListAsync();
 
-        return Ok(transactions);
+        return Ok(new
+        {
+            TotalCount = totalCount,
+            PageNumber = query.PageNumber,
+            PageSize = query.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)query.PageSize),
+            Data = transactions
+        });
     }
 
     // POST: api/transactions
@@ -56,6 +88,7 @@ public class TransactionsController : ControllerBase
     public async Task<ActionResult<TransactionResponseDto>> CreateTransaction(TransactionCreateDto request)
     {
         var userId = GetUserId();
+        if (userId == 0) return Unauthorized();
 
         // Verify category exists and belongs to the logged-in user
         var category = await _context.Categories
@@ -91,12 +124,13 @@ public class TransactionsController : ControllerBase
 
         return CreatedAtAction(nameof(GetTransactions), new { id = transaction.Id }, response);
     }
-    
+
     // GET: api/transactions/summary
     [HttpGet("summary")]
     public async Task<ActionResult<TransactionSummaryDto>> GetSummary()
     {
         var userId = GetUserId();
+        if (userId == 0) return Unauthorized();
 
         var transactions = await _context.Transactions
             .Where(t => t.UserId == userId)
