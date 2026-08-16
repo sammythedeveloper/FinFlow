@@ -1,10 +1,12 @@
 using FinancialTracker.API.Data;
-using FinancialTracker.API.DTOs; // 
+using FinancialTracker.API.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinancialTracker.API.Controllers;
 
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class UsersController : ControllerBase
