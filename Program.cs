@@ -12,7 +12,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 var tokenKey = builder.Configuration["AppSettings:Token"]
@@ -24,7 +23,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(tokenKey)),
             ValidateIssuer = false,
             ValidateAudience = false,
         };
@@ -34,7 +34,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("VueDev", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://finflow-client-one.vercel.app")
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "https://finflow-client-one.vercel.app")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -43,17 +45,6 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/openapi/v1.json", "FinancialTracker API v1");
-        options.RoutePrefix = string.Empty;
-    });
-}
 
 app.UseCors("VueDev");
 app.UseAuthentication();
