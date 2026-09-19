@@ -20,45 +20,49 @@ public class TransactionsController : ControllerBase
         _context = context;
     }
 
-    // Helper method to extract UserId from JWT claims
-    private int GetUserId()
+    // Helper method to extract UserId from Supabase JWT
+    private Guid GetUserId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-        return claim != null && int.TryParse(claim.Value, out int id) ? id : 0;
+        return claim != null && Guid.TryParse(claim.Value, out var id) ? id : Guid.Empty;
     }
 
-    // GET: api/transactions (Supports Filtering & Pagination)
+    // GET: api/transactions
     [HttpGet]
     public async Task<IActionResult> GetTransactions([FromQuery] TransactionQueryParameters query)
     {
         var userId = GetUserId();
-        if (userId == 0)
-        {
+        if (userId == Guid.Empty)
             return Unauthorized();
-        }
 
-        // Base query restricted to logged-in user
         var transactionQuery = _context.Transactions
             .Where(t => t.UserId == userId)
             .Include(t => t.Category)
             .AsQueryable();
 
-        // 1. Apply Filters
         if (query.CategoryId.HasValue)
             transactionQuery = transactionQuery.Where(t => t.CategoryId == query.CategoryId);
 
-        if (query.StartDate.HasValue)
-            transactionQuery = transactionQuery.Where(t => t.Date >= query.StartDate);
+      if (query.StartDate.HasValue)
+{
+    var startDate = query.StartDate.Value.Date;
 
-        if (query.EndDate.HasValue)
-            transactionQuery = transactionQuery.Where(t => t.Date <= query.EndDate);
+    transactionQuery = transactionQuery
+        .Where(t => t.Date >= startDate);
+}
 
-        // 2. Get total count before pagination limits
+if (query.EndDate.HasValue)
+{
+    var endDateExclusive = query.EndDate.Value.Date.AddDays(1);
+
+    transactionQuery = transactionQuery
+        .Where(t => t.Date < endDateExclusive);
+}
+
         var totalCount = await transactionQuery.CountAsync();
 
-        // 3. Apply Ordering, Pagination, and DTO projection
         var transactions = await transactionQuery
-            .OrderByDescending(t => t.Date) // Newest first
+            .OrderByDescending(t => t.Date)
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
             .Select(t => new TransactionResponseDto
@@ -88,9 +92,9 @@ public class TransactionsController : ControllerBase
     public async Task<ActionResult<TransactionResponseDto>> CreateTransaction(TransactionCreateDto request)
     {
         var userId = GetUserId();
-        if (userId == 0) return Unauthorized();
+        if (userId == Guid.Empty)
+            return Unauthorized();
 
-        // Verify category exists and belongs to the logged-in user
         var category = await _context.Categories
             .FirstOrDefaultAsync(c => c.Id == request.CategoryId && c.UserId == userId);
 
@@ -104,7 +108,7 @@ public class TransactionsController : ControllerBase
             Amount = request.Amount,
             Description = request.Description,
             Date = request.Date,
-            UserId = userId, // Securely assigned from token
+            UserId = userId,
             CategoryId = request.CategoryId
         };
 
@@ -130,7 +134,8 @@ public class TransactionsController : ControllerBase
     public async Task<ActionResult<TransactionSummaryDto>> GetSummary()
     {
         var userId = GetUserId();
-        if (userId == 0) return Unauthorized();
+        if (userId == Guid.Empty)
+            return Unauthorized();
 
         var transactions = await _context.Transactions
             .Where(t => t.UserId == userId)

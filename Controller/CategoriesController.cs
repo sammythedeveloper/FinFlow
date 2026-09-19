@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinancialTracker.API.Controllers;
 
-[Authorize] // only logged-in users can access it
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class CategoriesController : ControllerBase
@@ -20,18 +20,19 @@ public class CategoriesController : ControllerBase
         _context = context;
     }
 
-    // Helper method to extract UserId from JWT claims
-    private int GetUserId()
+    private Guid GetUserId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-        return claim != null && int.TryParse(claim.Value, out int id) ? id : 0;
+        return claim != null && Guid.TryParse(claim.Value, out var id) ? id : Guid.Empty;
     }
 
-    // GET: api/categories (Only returns categories for the logged-in user)
+    // GET: api/categories
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CategoryResponseDto>>> GetCategories()
     {
         var userId = GetUserId();
+        if (userId == Guid.Empty)
+            return Unauthorized();
 
         var categories = await _context.Categories
             .Where(c => c.UserId == userId)
@@ -52,12 +53,14 @@ public class CategoriesController : ControllerBase
     public async Task<ActionResult<CategoryResponseDto>> CreateCategory(CategoryCreateDto request)
     {
         var userId = GetUserId();
+        if (userId == Guid.Empty)
+            return Unauthorized();
 
         var category = new Category
         {
             Name = request.Name,
             Type = request.Type,
-            UserId = userId // Automatically assigned from token, ignoring request payload
+            UserId = userId
         };
 
         _context.Categories.Add(category);

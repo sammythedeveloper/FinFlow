@@ -15,7 +15,6 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Enforce unique emails for users
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();

@@ -1,4 +1,3 @@
-using System.Text;
 using FinancialTracker.API.Data;
 using FinancialTracker.API.Middleware;
 using FinancialTracker.API.Services;
@@ -17,26 +16,40 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// JWT
-var tokenKey = builder.Configuration["AppSettings:Token"]
-    ?? throw new InvalidOperationException(
-        "JWT token key not found in configuration."
-    );
+// ========== SUPABASE JWT AUTH ==========
+var supabaseUrl = builder.Configuration["Supabase:Url"];
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.Authority = $"{supabaseUrl}/auth/v1";
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
+            ValidateIssuer = true,
+            ValidIssuer = $"{supabaseUrl}/auth/v1",
+
+            ValidateAudience = true,
+            ValidAudience = "authenticated",
+
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(tokenKey)
-            ),
-            ValidateIssuer = false,
-            ValidateAudience = false,
+
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine("===== JWT AUTH FAILED =====");
+                Console.WriteLine(context.Exception.ToString());
+                Console.WriteLine("===========================");
+                return Task.CompletedTask;
+            }
         };
     });
-
+    
 // CORS
 builder.Services.AddCors(options =>
 {
