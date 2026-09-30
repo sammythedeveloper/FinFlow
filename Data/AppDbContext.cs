@@ -11,12 +11,18 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<User>()
-            .HasIndex(u => u.Email)
-            .IsUnique();
-    }
+    modelBuilder.Entity<User>()
+        .HasIndex(u => u.Email)
+        .IsUnique();
+
+    modelBuilder.Entity<Transaction>()
+        .HasOne(t => t.User)
+        .WithMany(u => u.Transactions)
+        .HasForeignKey(t => t.UserId)
+        .OnDelete(DeleteBehavior.NoAction);
+}
 }

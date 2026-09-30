@@ -1,4 +1,5 @@
 using FinancialTracker.API.Data;
+using FinancialTracker.API.Models;
 using FinancialTracker.API.Middleware;
 using FinancialTracker.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Database
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
+    options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")
     ));
 
@@ -67,10 +68,82 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Apply EF Core migrations automatically
+// Apply EF Core migrations automatically and add demo data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
     db.Database.Migrate();
+
+    // Add safe demo data for the Azure assignment
+    if (!db.Users.Any(u => u.Email == "demo@finflow.local"))
+    {
+        var demoUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = "Demo User",
+            Email = "demo@finflow.local",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.Users.Add(demoUser);
+        db.SaveChanges();
+
+        var food = new Category
+        {
+            Name = "Food",
+            Type = "Expense",
+            UserId = demoUser.Id
+        };
+
+        var transportation = new Category
+        {
+            Name = "Transportation",
+            Type = "Expense",
+            UserId = demoUser.Id
+        };
+
+        var salary = new Category
+        {
+            Name = "Salary",
+            Type = "Income",
+            UserId = demoUser.Id
+        };
+
+        db.Categories.AddRange(food, transportation, salary);
+        db.SaveChanges();
+
+        var transactions = new List<Transaction>
+        {
+            new Transaction
+            {
+                Amount = 25.50m,
+                Description = "Lunch",
+                Date = DateTime.UtcNow.AddDays(-2),
+                UserId = demoUser.Id,
+                CategoryId = food.Id
+            },
+            new Transaction
+            {
+                Amount = 45.00m,
+                Description = "Transit",
+                Date = DateTime.UtcNow.AddDays(-1),
+                UserId = demoUser.Id,
+                CategoryId = transportation.Id
+            },
+            new Transaction
+            {
+                Amount = 2500.00m,
+                Description = "Monthly salary",
+                Date = DateTime.UtcNow,
+                UserId = demoUser.Id,
+                CategoryId = salary.Id
+            }
+        };
+
+        db.Transactions.AddRange(transactions);
+        db.SaveChanges();
+    }
 }
 
 // Middleware
